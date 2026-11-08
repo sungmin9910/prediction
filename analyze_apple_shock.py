@@ -57,7 +57,7 @@ df['elapsed_steps'] = df.groupby('run_id').cumcount() + 1
 df['shock_rate'] = df['cum_excess_g'] / df['elapsed_steps']  # 단위 시간당 누적 충격 축적 속도
 
 # 사과 손상 지수 (Apple Damage Index, ADI: 0 ~ 100점 스케일)
-# 누적 초과 충격량(70%) + 누적 충격 에너지(20%) + 온습도 스트레스(10%) 결합
+# 누적 초과 충격량(65%) + 누적 충격 에너지(25%) + 온습도 스트레스(10%) 결합
 raw_damage = (
     0.65 * (df['cum_excess_g'] / 80.0) +
     0.25 * (df['cum_shock_energy'] / 100.0) +
@@ -141,7 +141,7 @@ for name, col in [
 
 # 4. [2단계] 누적 충격 패턴 및 주행 센서 기반 '향후 사과 상태(정상/주의/파손위험)' 예측 모델링
 # 데이터 누수(Data Leakage) 방지를 위해 직접적인 타깃 정의 수식 변수(cum_excess_g 원값) 대신,
-# 직전 시점까지의 누적 충격 추이(10스텝 전 누적치), 최근 진동 평균/표준편차, 충격 축적 속도(shock_rate), 속도, 온습도를 입력 피처로 사용하여
+# 직전 시점까지의 누적 충격 추이(5스텝 전 누적치), 최근 진동 평균/표준편차, 충격 축적 속도(shock_rate), 속도, 온습도를 입력 피처로 사용하여
 # 10스텝 뒤(미래 시점)의 사과 품질 상태(apple_state)를 예측!
 df['future_apple_state'] = df.groupby('run_id')['apple_state'].shift(-10).fillna(df['apple_state']).astype(int)
 df['prev_cum_g_lag5'] = df.groupby('run_id')['cum_excess_g'].shift(5).fillna(0)
