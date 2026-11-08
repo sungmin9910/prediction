@@ -129,7 +129,7 @@ def create_ppt():
     if os.path.exists('results/fig1_shock_timeseries.png'):
         s4.shapes.add_picture('results/fig1_shock_timeseries.png', Inches(0.8), Inches(1.4), width=Inches(11.7))
 
-    # Slide 5: 1단계 비지도 이상 탐지 모델 정의 (학술적 정의로 수정)
+    # Slide 5: 1단계 비지도 이상 탐지 모델 정의
     s5 = prs.slides.add_slide(blank_layout)
     add_header(s5, "4. [1단계] 비지도 이상 탐지(Unsupervised Anomaly Detection) 모델 정의", "사전 라벨(Label) 없이 다변량 센서 공간의 분할 깊이·군집 중심·결정 경계·국소 밀도를 학습")
     bullets_s5 = [
@@ -137,7 +137,7 @@ def create_ppt():
         "  • 정의: 무작위 특성(Feature) 및 분할 임계값을 기준으로 이진 탐색 트리(iTree)를 재귀적으로 구성하여 샘플을 고립시키는 기법",
         "  • 원리: 정상 데이터는 루트에서 리프 노드까지의 평균 경로 길이 E(h(x))가 긴 반면, 희소한 이상치는 짧은 경로에서 조기 분리됨",
         "",
-        "■ ② K-Means Clustering (Centroid-based Partitioning, 강의 7장 군집 분석)",
+        "■ ② K-Means Clustering (Centroid-based Partitioning)",
         "  • 정의: 클러스터 내 오차제곱합(WCSS)을 최소화하도록 K개의 중심점(Centroid)을 반복 갱신하여 주행 상태를 군집화 (K = 3)",
         "",
         "■ ③ One-Class SVM (Kernel Boundary-based Method)",
@@ -172,19 +172,19 @@ def create_ppt():
     ]
     add_textbox_bullets(s6, 8.4, 1.5, 4.6, 5.5, bullets_s6, font_size=14)
 
-    # Slide 7: 2단계 강의 연계 지도 학습 모델 정의 (학술적 정의로 수정)
+    # Slide 7: 2단계 지도 학습 모델 정의
     s7 = prs.slides.add_slide(blank_layout)
     add_header(s7, "6. [2단계] 지도 학습 예측 모델 정의 및 하이퍼파라미터 최적화", "단일 결정 트리(Decision Tree), 배깅 앙상블(Random Forest), 다층 신경망(MLP) 비교 설계")
     bullets_s7 = [
-        "■ ① Decision Tree Classifier (CART 알고리즘, 강의 3~4주차)",
+        "■ ① Decision Tree Classifier (CART 알고리즘)",
         "  • 정의: 지니 불순도(Gini Impurity) 감소량을 극대화하는 방향으로 특징 공간을 재귀적 이진 분할하는 분류 모델 (max_depth = 5)",
         "  • 특성: 의사결정 규칙의 해석 가능성이 우수하나, 단일 트리 구조 특성상 학습 데이터에 대한 분산(Variance)이 큼",
         "",
-        "■ ② Random Forest & GridSearchCV (Bagging Ensemble, 강의 4주차)",
+        "■ ② Random Forest & GridSearchCV (Bagging Ensemble)",
         "  • 정의: 부트스트랩 샘플링(Bootstrap)과 무작위 특성 서브셋을 통해 다수의 결정 트리를 병렬 학습·집계하는 배깅 앙상블 모델",
         "  • 최적화: 5-Fold 교차 검증 기반 GridSearchCV 수행 → 최적 파라미터 도출 (n_estimators = 200, max_depth = 5, min_samples_split = 2)",
         "",
-        "■ ③ Multi-Layer Perceptron (MLPClassifier, 강의 6주차 딥러닝)",
+        "■ ③ Multi-Layer Perceptron (MLPClassifier)",
         "  • 정의: 다층 은닉층(64, 32 노드), ReLU 활성화 함수 및 오차 역전파(Backpropagation)를 통해 비선형 결정 경계를 학습하는 신경망"
     ]
     add_textbox_bullets(s7, 0.8, 1.45, 11.7, 5.6, bullets_s7, font_size=15)

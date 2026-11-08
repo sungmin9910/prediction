@@ -74,7 +74,7 @@ df['ocsvm_pred'] = (oc_svm.fit_predict(X_unsup_scaled) == -1).astype(int)
 lof = LocalOutlierFactor(n_neighbors=20, contamination=0.04)
 df['lof_pred'] = (lof.fit_predict(X_unsup_scaled) == -1).astype(int)
 
-# (d) K-Means 클러스터링 (강의 7장 연계: K=3 안전 운행 / 고속 주행 / 이상 충격 클러스터)
+# (d) K-Means 클러스터링 (K=3 안전 운행 / 고속 주행 / 이상 충격 클러스터)
 kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
 df['kmeans_cluster'] = kmeans.fit_predict(X_unsup_scaled)
 # 평균 g_force가 가장 높은 클러스터를 이상 충격 클러스터로 매핑
@@ -87,7 +87,7 @@ for name, col in [
     ('Isolation Forest', 'iso_pred'),
     ('One-Class SVM', 'ocsvm_pred'),
     ('Local Outlier Factor (LOF)', 'lof_pred'),
-    ('K-Means (Cluster Analysis)', 'kmeans_pred')
+    ('K-Means Clustering', 'kmeans_pred')
 ]:
     acc = accuracy_score(df['is_shock_gt'], df[col])
     prec = precision_score(df['is_shock_gt'], df[col], zero_division=0)
@@ -102,11 +102,10 @@ for name, col in [
     }
     print(f"[비지도] {name}: Acc={acc*100:.2f}%, Prec={prec*100:.2f}%, Recall={rec*100:.2f}%, F1={f1*100:.2f}%")
 
-# 4. [2단계] 강의 연계 지도 학습 모델 비교 및 GridSearchCV 튜닝
+# 4. [2단계] 지도 학습 예측 모델 비교 및 GridSearchCV 튜닝
 # (Decision Tree vs Random Forest vs MLP)
-# 타깃: Isolation Forest가 탐지한 이상 충격 또는 도메인 충격 라벨 예측
-# 피처: 현재 주행 환경 및 직전 시계열 진동 특성 (g_force 직접 노출을 제외하거나 센서 결합 특성 사용)
-# 여기서는 센서 종합 피처(진동 변동성, 직전 충격, 속도, 속도 변화량, 온습도, 충격 에너지)로 학습
+# 타깃: 도메인 충격 라벨 예측
+# 피처: 센서 종합 피처(진동 변동성, 직전 충격, 속도, 속도 변화량, 온습도)
 sup_features = ['speed', 'speed_diff', 'g_force_prev1', 'g_force_roll_mean3', 'g_force_roll_std3', 'temperature', 'humidity']
 X_sup = df[sup_features]
 y_sup = df['is_shock_gt']
@@ -121,13 +120,13 @@ X_test_scaled = scaler_sup.transform(X_test)
 
 sup_results = {}
 
-# (1) Decision Tree (강의 3~4주차)
+# (1) Decision Tree
 dt = DecisionTreeClassifier(max_depth=5, random_state=42)
 dt.fit(X_train, y_train)
 dt_pred = dt.predict(X_test)
 dt_prob = dt.predict_proba(X_test)[:, 1]
 
-# (2) Random Forest + GridSearchCV (강의 4주차 RF_gridsearch.ipynb 방식)
+# (2) Random Forest + GridSearchCV
 param_grid = {
     'n_estimators': [50, 100, 200],
     'max_depth': [5, 8, 12],
@@ -140,16 +139,16 @@ best_rf = grid_search.best_estimator_
 rf_pred = best_rf.predict(X_test)
 rf_prob = best_rf.predict_proba(X_test)[:, 1]
 
-# (3) MLP Deep Learning (강의 6주차 MLP)
+# (3) MLP Deep Learning
 mlp = MLPClassifier(hidden_layer_sizes=(64, 32), max_iter=300, random_state=42)
 mlp.fit(X_train_scaled, y_train)
 mlp_pred = mlp.predict(X_test_scaled)
 mlp_prob = mlp.predict_proba(X_test_scaled)[:, 1]
 
 for name, pred, prob in [
-    ('Decision Tree (3주차)', dt_pred, dt_prob),
-    ('Random Forest + GridSearch (4주차)', rf_pred, rf_prob),
-    ('MLP 신경망 (6주차)', mlp_pred, mlp_prob)
+    ('Decision Tree', dt_pred, dt_prob),
+    ('Random Forest + GridSearchCV', rf_pred, rf_prob),
+    ('MLP (Multi-Layer Perceptron)', mlp_pred, mlp_prob)
 ]:
     acc = accuracy_score(y_test, pred)
     prec = precision_score(y_test, pred, zero_division=0)
@@ -217,7 +216,7 @@ axes[0].bar(x - w/2, unsup_accs, w, label='정확도 (Accuracy %)', color='#3498
 axes[0].bar(x + w/2, unsup_f1s, w, label='F1-Score (%)', color='#E67E22')
 axes[0].set_title('[1단계] 비지도 이상 탐지 모델 성능 비교', fontsize=12, fontweight='bold')
 axes[0].set_xticks(x)
-axes[0].set_xticklabels(['Isolation\nForest', 'One-Class\nSVM', 'LOF', 'K-Means\n(7장 군집)'], fontsize=9.5)
+axes[0].set_xticklabels(['Isolation\nForest', 'One-Class\nSVM', 'LOF', 'K-Means\nClustering'], fontsize=9.5)
 axes[0].set_ylim(0, 108)
 axes[0].legend()
 axes[0].grid(axis='y', alpha=0.3)
@@ -231,9 +230,9 @@ sup_aucs = [sup_results[k]['roc_auc'] for k in sup_names]
 x2 = np.arange(len(sup_names))
 axes[1].bar(x2 - w/2, sup_aucs, w, label='ROC-AUC (%)', color='#2ECC71')
 axes[1].bar(x2 + w/2, sup_f1s, w, label='F1-Score (%)', color='#9B59B6')
-axes[1].set_title('[2단계] 강의 연계 예측 모델 성능 비교', fontsize=12, fontweight='bold')
+axes[1].set_title('[2단계] 지도 학습 예측 모델 성능 비교', fontsize=12, fontweight='bold')
 axes[1].set_xticks(x2)
-axes[1].set_xticklabels(['Decision Tree\n(3주차)', 'Random Forest\n+GridSearch (4주차)', 'MLP 딥러닝\n(6주차)'], fontsize=9.5)
+axes[1].set_xticklabels(['Decision Tree', 'Random Forest\n+ GridSearchCV', 'MLP\n(Neural Net)'], fontsize=9.5)
 axes[1].set_ylim(0, 108)
 axes[1].legend()
 axes[1].grid(axis='y', alpha=0.3)
