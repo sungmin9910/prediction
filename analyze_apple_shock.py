@@ -219,14 +219,14 @@ print("\nFeature Importances:\n", feat_imp)
 
 # 5. 고해상도 발표용 차트 4종 생성
 # Chart 1: 10개 운행 세션별 시간에 따른 누적 충격량(Cumulative Shock) 추이 및 사과 상태 변화 곡선
-plt.figure(figsize=(10.5, 5.5), dpi=150)
+plt.figure(figsize=(11, 5.8), dpi=150)
 top_runs = trip_summary.index[:5].tolist() + [trip_summary.index[7]]  # 상위 5개 + 최장거리 안전운행 1개 비교
 palette = ['#E74C3C', '#E67E22', '#F39C12', '#8E44AD', '#3498DB', '#2ECC71']
 
 for idx, r_id in enumerate(top_runs):
     sub = df[df['run_id'] == r_id]
     label_name = f"{r_id} (최종 {sub['cum_excess_g'].max():.1f}G)"
-    plt.plot(sub['elapsed_steps'], sub['cum_excess_g'], linewidth=2.2, color=palette[idx], label=label_name)
+    plt.plot(sub['elapsed_steps'], sub['cum_excess_g'], linewidth=2.3, color=palette[idx], label=label_name)
 
 plt.axhline(65, color='#C0392B', linestyle='--', linewidth=1.8, label='파손 위험 등급 임계선 (누적 65G)')
 plt.axhline(25, color='#F39C12', linestyle=':', linewidth=1.8, label='주의(미세타박) 등급 임계선 (누적 25G)')
@@ -239,7 +239,8 @@ plt.xlabel('운행 경과 스텝 (Time Steps)', fontsize=11)
 plt.ylabel('누적 초과 충격량 (Cumulative Excess G-Force)', fontsize=11)
 plt.ylim(0, 128)
 plt.xlim(0, 1550)
-plt.legend(loc='upper left', fontsize=9.5, frameon=True)
+# 그래프 우측 중하단(X: 700~1500, Y: 25~63) 빈 영역에 범례를 배치하여 곡선 가림 완전 방지
+plt.legend(loc='center right', bbox_to_anchor=(0.98, 0.38), fontsize=9.2, frameon=True, facecolor='white', framealpha=0.92)
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.savefig('results/fig1_shock_timeseries.png')
@@ -266,14 +267,15 @@ plt.axhline(1.8, color='#C0392B', linestyle='-.', linewidth=1.2, alpha=0.7, labe
 plt.title('누적 충격량(X축)과 순간 충격량(Y축)에 따른 사과 품질 3단계 상태 분포 및 이상 탐지', fontsize=12.5, fontweight='bold', pad=12)
 plt.xlabel('누적 초과 충격량 (Cumulative Excess G-Force)', fontsize=11)
 plt.ylabel('순간 충격 가속도 (Instantaneous G-Force)', fontsize=11)
-plt.legend(loc='upper right', fontsize=9.5, frameon=True)
+plt.ylim(0.5, 16.2)
+plt.legend(loc='upper right', fontsize=9.5, frameon=True, facecolor='white', framealpha=0.92)
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.savefig('results/fig2_isolation_forest_scatter.png')
 plt.close()
 
 # Chart 3: 1단계 비지도 모델 & 2단계 지도 학습 사과 상태 예측 모델 성능 비교
-fig, axes = plt.subplots(1, 2, figsize=(12, 5), dpi=150)
+fig, axes = plt.subplots(1, 2, figsize=(12, 5.2), dpi=150)
 
 unsup_names = list(unsup_results.keys())
 unsup_f1s = [unsup_results[k]['f1'] for k in unsup_names]
@@ -282,14 +284,17 @@ x = np.arange(len(unsup_names))
 w = 0.35
 axes[0].bar(x - w/2, unsup_accs, w, label='정확도 (Accuracy %)', color='#3498DB')
 axes[0].bar(x + w/2, unsup_f1s, w, label='F1-Score (%)', color='#E67E22')
-axes[0].set_title('[1단계] 비지도 이상/피로 상태 탐지 성능 비교', fontsize=12, fontweight='bold')
+axes[0].set_title('[1단계] 비지도 이상/피로 상태 탐지 성능 비교', fontsize=12, fontweight='bold', pad=10)
 axes[0].set_xticks(x)
 axes[0].set_xticklabels(['Isolation\nForest', 'K-Means\nClustering', 'One-Class\nSVM', 'LOF'], fontsize=9.5)
-axes[0].set_ylim(0, 108)
-axes[0].legend()
+axes[0].set_ylim(0, 118)
+# 상단 여백(100~118 구간)에 가로 2열로 범례를 배치하여 막대와 텍스트 가림 완전 방지
+axes[0].legend(loc='upper center', ncol=2, fontsize=9.5, frameon=True, facecolor='white')
 axes[0].grid(axis='y', alpha=0.3)
+for i, v in enumerate(unsup_accs):
+    axes[0].text(i - w/2, v + 1.5, f"{v:.1f}%", ha='center', fontsize=8.2, color='#1F618D', fontweight='bold')
 for i, v in enumerate(unsup_f1s):
-    axes[0].text(i + w/2, v + 1.5, f"{v:.1f}%", ha='center', fontsize=8.5, fontweight='bold')
+    axes[0].text(i + w/2, v + 1.5, f"{v:.1f}%", ha='center', fontsize=8.2, color='#AF601A', fontweight='bold')
 
 sup_names = list(sup_results.keys())
 sup_accs = [sup_results[k]['accuracy'] for k in sup_names]
@@ -297,14 +302,17 @@ sup_f1s = [sup_results[k]['f1_macro'] for k in sup_names]
 x2 = np.arange(len(sup_names))
 axes[1].bar(x2 - w/2, sup_accs, w, label='분류 정확도 (Accuracy %)', color='#2ECC71')
 axes[1].bar(x2 + w/2, sup_f1s, w, label='Macro F1-Score (%)', color='#9B59B6')
-axes[1].set_title('[2단계] 누적 충격 기반 사과 상태(3등급) 예측 성능', fontsize=12, fontweight='bold')
+axes[1].set_title('[2단계] 누적 충격 기반 사과 상태(3등급) 예측 성능', fontsize=12, fontweight='bold', pad=10)
 axes[1].set_xticks(x2)
 axes[1].set_xticklabels(['Decision Tree', 'Random Forest\n+ GridSearchCV', 'MLP\n(Neural Net)'], fontsize=9.5)
-axes[1].set_ylim(0, 108)
-axes[1].legend()
+axes[1].set_ylim(0, 118)
+# 상단 여백(100~118 구간)에 가로 2열로 범례를 배치하여 막대 가림 완전 방지
+axes[1].legend(loc='upper center', ncol=2, fontsize=9.5, frameon=True, facecolor='white')
 axes[1].grid(axis='y', alpha=0.3)
+for i, v in enumerate(sup_accs):
+    axes[1].text(i - w/2, v + 1.5, f"{v:.1f}%", ha='center', fontsize=8.2, color='#1E8449', fontweight='bold')
 for i, v in enumerate(sup_f1s):
-    axes[1].text(i + w/2, v + 1.5, f"{v:.1f}%", ha='center', fontsize=8.5, fontweight='bold')
+    axes[1].text(i + w/2, v + 1.5, f"{v:.1f}%", ha='center', fontsize=8.2, color='#6C3483', fontweight='bold')
 
 plt.tight_layout()
 plt.savefig('results/fig3_model_comparison.png')
