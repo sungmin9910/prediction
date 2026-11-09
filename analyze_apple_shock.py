@@ -246,30 +246,70 @@ plt.tight_layout()
 plt.savefig('results/fig1_shock_timeseries.png')
 plt.close()
 
-# Chart 2: 누적 충격량 vs 순간 충격량 공간에서 사과 상태(3단계) 및 Isolation Forest 탐지 분포
-plt.figure(figsize=(9.5, 5.5), dpi=150)
-state_colors = {0: '#2ECC71', 1: '#F39C12', 2: '#E74C3C'}
+# Chart 2: 누적 충격량 vs 순간 충격량 공간에서 사과 상태(3단계) 및 K-Means 군집 중심 / Isolation Forest 스파이크 탐지 분포
+fig, ax = plt.subplots(figsize=(9.6, 5.5), dpi=150)
+
+# 배경에 누적 충격량 등급 구간(Zone) 음영 표시
+ax.axvspan(0, 25, color='#2ECC71', alpha=0.08)
+ax.axvspan(25, 65, color='#F39C12', alpha=0.08)
+ax.axvspan(65, 122, color='#E74C3C', alpha=0.08)
+
+# 상단 구간 안내 텍스트 (Malgun Gothic 호환 특수문자 ● 사용)
+ax.text(12.5, 4.02, '● Grade A 정상 구간\n(누적 < 25G)', ha='center', va='top', fontsize=9.2, fontweight='bold', color='#1E8449', bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='#2ECC71', alpha=0.92))
+ax.text(45.0, 4.02, '● Grade B 주의 구간\n(누적 25 ~ 65G)', ha='center', va='top', fontsize=9.2, fontweight='bold', color='#B7950B', bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='#F39C12', alpha=0.92))
+ax.text(93.5, 4.02, '● Grade C 위험 구간\n(누적 ≥ 65G)', ha='center', va='top', fontsize=9.2, fontweight='bold', color='#C0392B', bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='#E74C3C', alpha=0.92))
+
+state_colors = {0: '#27AE60', 1: '#F39C12', 2: '#E74C3C'}
 state_labels = {
-    0: f"Grade A: 정상/신선 상태 ({state_counts.get(0,0)}건)",
-    1: f"Grade B: 주의/미세타박 상태 ({state_counts.get(1,0)}건)",
-    2: f"Grade C: 파손 위험 상태 ({state_counts.get(2,0)}건)"
+    0: f"Grade A: 정상/신선 ({state_counts.get(0,0)}건)",
+    1: f"Grade B: 미세타박 주의 ({state_counts.get(1,0)}건)",
+    2: f"Grade C: 파손 위험 ({state_counts.get(2,0)}건)"
 }
+
+# Y축 가독성을 위해 3.5G 초과 극단치(9건, 최대 14.46G)는 상단(3.52G)에 클리핑하여 별도 마커로 표시
+normal_mask = df['g_force'] <= 3.52
+extreme_mask = df['g_force'] > 3.52
+
+# 일반 분포 점들은 겹침을 줄이기 위해 작고 투명하게 표시
 for st in [0, 1, 2]:
-    sub = df[df['apple_state'] == st]
-    plt.scatter(sub['cum_excess_g'], sub['g_force'], c=state_colors[st], alpha=0.55, s=25, label=state_labels[st])
+    sub = df[(df['apple_state'] == st) & normal_mask]
+    ax.scatter(sub['cum_excess_g'], sub['g_force'], c=state_colors[st], alpha=0.38, s=16, edgecolors='none', label=state_labels[st])
 
-anom_pts = df[df['iso_pred'] == 1]
-plt.scatter(anom_pts['cum_excess_g'], anom_pts['g_force'], facecolors='none', edgecolors='#1B2A4A', s=55, linewidth=1.2, label=f'Isolation Forest 핵심 이상 탐지 ({len(anom_pts)}건)')
+# 1) Isolation Forest가 포착한 순간 고충격 스파이크(>=1.8G)만 깔끔하게 강조 표시 (하단 1.0G 기저 구간 가림 방지)
+spike_anom = df[(df['iso_pred'] == 1) & (df['g_force'] >= 1.8) & normal_mask]
+ax.scatter(
+    spike_anom['cum_excess_g'], spike_anom['g_force'],
+    facecolors='none', edgecolors='#1B2A4A', s=48, linewidth=1.3,
+    label=f'Isolation Forest 돌발 고충격(≥1.8G) 포착 ({len(spike_anom) + int(extreme_mask.sum())}건)'
+)
 
-plt.axvline(25, color='#F39C12', linestyle=':', linewidth=1.5)
-plt.axvline(65, color='#C0392B', linestyle='--', linewidth=1.5)
-plt.axhline(1.8, color='#C0392B', linestyle='-.', linewidth=1.2, alpha=0.7, label='순간 임계 충격 (1.8G)')
-plt.title('누적 충격량(X축)과 순간 충격량(Y축)에 따른 사과 품질 3단계 상태 분포 및 이상 탐지', fontsize=12.5, fontweight='bold', pad=12)
-plt.xlabel('누적 초과 충격량 (Cumulative Excess G-Force)', fontsize=11)
-plt.ylabel('순간 충격 가속도 (Instantaneous G-Force)', fontsize=11)
-plt.ylim(0.5, 16.2)
-plt.legend(loc='upper right', fontsize=9.5, frameon=True, facecolor='white', framealpha=0.92)
-plt.grid(True, alpha=0.3)
+# 3.52G 초과 극단 충격(9건, 최대 14.46G) 상단 삼각형 마커 표시
+ext_pts = df[extreme_mask]
+ax.scatter(
+    ext_pts['cum_excess_g'], [3.52] * len(ext_pts),
+    marker='^', c='#8E44AD', edgecolors='#1B2A4A', s=75, linewidth=1.2, zorder=6,
+    label=f'극단 스파이크 충격 (3.8G~14.46G, {len(ext_pts)}건 상단 표시)'
+)
+
+# 2) K-Means (K=3) 군집 중심점(Centroid) 3곳을 별표(★)로 표시하여 누적 충격 군집 분리 시각화
+cluster_centers_df = df.groupby('kmeans_cluster')[['cum_excess_g', 'g_force']].mean()
+ax.scatter(
+    cluster_centers_df['cum_excess_g'], cluster_centers_df['g_force'],
+    marker='*', c='#FFF200', edgecolors='#1B2A4A', s=280, linewidth=1.6, zorder=7,
+    label='K-Means 3개 군집 중심점 (★ 누적 상태 분리)'
+)
+
+ax.axvline(25, color='#F39C12', linestyle=':', linewidth=1.6)
+ax.axvline(65, color='#C0392B', linestyle='--', linewidth=1.6)
+ax.axhline(1.8, color='#C0392B', linestyle='-.', linewidth=1.5, alpha=0.85, label='순간 임계 충격 기준선 (1.8G)')
+
+ax.set_title('누적 충격량(X축)과 순간 충격량(Y축)에 따른 사과 상태 분포 (K-Means vs Isolation Forest)', fontsize=12.2, fontweight='bold', pad=12)
+ax.set_xlabel('누적 초과 충격량 (Cumulative Excess G-Force, 단위: G)', fontsize=11)
+ax.set_ylabel('순간 충격 가속도 (Instantaneous G-Force, 단위: G)', fontsize=11)
+ax.set_xlim(-2, 122)
+ax.set_ylim(0.8, 4.18)
+ax.legend(loc='center right', bbox_to_anchor=(0.99, 0.64), fontsize=8.8, frameon=True, facecolor='white', framealpha=0.94)
+ax.grid(True, alpha=0.25)
 plt.tight_layout()
 plt.savefig('results/fig2_isolation_forest_scatter.png')
 plt.close()
