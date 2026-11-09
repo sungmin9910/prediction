@@ -583,3 +583,4 @@ def create_stage1_ppt():
 if __name__ == "__main__":
     generate_stage1_charts_and_data()
     create_stage1_ppt()
+
